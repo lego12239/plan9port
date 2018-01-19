@@ -680,12 +680,15 @@ texttype(Text *t, Rune r)
 
 	nr = 1;
 	rp = &r;
+	//warning(nil, "charcode is %x\n", r);
 	switch(r){
+	case 0x02:
 	case Kleft:
 		typecommit(t);
 		if(t->q0 > 0)
 			textshow(t, t->q0-1, t->q0-1, TRUE);
 		return;
+	case 0x06:
 	case Kright:
 		typecommit(t);
 		if(t->q1 < t->file->b.nc)
@@ -825,7 +828,7 @@ texttype(Text *t, Rune r)
 	}
 	textshow(t, t->q0, t->q0, 1);
 	switch(r){
-	case 0x06:	/* ^F: complete */
+	case 0x14:	/* ^T: complete */
 	case Kins:
 		typecommit(t);
 		rp = textcomplete(t);
