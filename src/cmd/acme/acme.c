@@ -32,6 +32,18 @@ int		mainpid;
 int		swapscrollbuttons = FALSE;
 char		*mtpt;
 
+/* End Of Colors code */
+#define EOCOLS 0xfffffe00
+/* colors of color scheme entities */
+int		cse_tag_cols[] = {0xeaffffff, 0x9eeeeeff, 0x8888ccfd, 0x000000ff,
+		0x000000ff, EOCOLS};
+int		cse_text_cols[] = {0xffffeaff, 0xeeee9eff, 0x99994cff, 0x000000ff,
+		0x000000ff, EOCOLS};
+int		cse_colbut_cols[] = {DPurpleblue, EOCOLS};
+int		cse_modflag_cols[] = {DMedblue, EOCOLS};
+int		cse_msel_cols[] = {0xaa0000ff, 0xffffffff, 0x006600ff, 0xffffffff,
+		EOCOLS};
+
 enum{
 	NSnarf = 1000	/* less than 1024, I/O buffer size */
 };
@@ -49,6 +61,7 @@ void	shutdownthread(void*);
 void	acmeerrorinit(void);
 void	readfile(Column*, char*);
 static int	shutdown(void*, char*);
+static void set_color_scheme(char*);
 
 void
 derror(Display *d, char *errorstr)
@@ -137,6 +150,11 @@ threadmain(int argc, char *argv[])
 	acmeshell = getenv("acmeshell");
 	if(acmeshell && *acmeshell == '\0')
 		acmeshell = nil;
+	p = getenv("acmecscheme");
+	if(p != nil){
+		set_color_scheme(p);
+		free(p);
+	}
 	p = getenv("tabstop");
 	if(p != nil){
 		maxtab = strtoul(p, nil, 0);
@@ -363,6 +381,65 @@ shutdownthread(void *v)
 		shutdown(nil, msg);
 }
 */
+
+static char* set_color_scheme_for_entity(int *ecols, char *csspec);
+
+/*
+ * Set acme color scheme from a textual specification csspec. spec format:
+ * ENTITY1=COLOR1.1:COLOR1.2:...;ENTITY2=COLOR2.1:COLOR2.2:...
+ * Any color can be empty(e.g. ENTITY1=COLOR1.1::COLOR1.3...).
+ */
+static void
+set_color_scheme(char *csspec)
+{
+	char *p;
+
+	for(p = csspec; p && *p; p = (p && *p) ? p + 1: p) {
+		if (strncmp("tag=", p, 4) == 0) {
+			p = set_color_scheme_for_entity(cse_tag_cols, p + 4);
+		} else if (strncmp("text=", p, 5) == 0) {
+			p = set_color_scheme_for_entity(cse_text_cols, p + 5);
+		} else if (strncmp("colbut=", p, 7) == 0) {
+			p = set_color_scheme_for_entity(cse_colbut_cols, p + 7);
+		} else if (strncmp("modflag=", p, 8) == 0) {
+			p = set_color_scheme_for_entity(cse_modflag_cols, p + 8);
+		} else if (strncmp("msel=", p, 5) == 0) {
+			p = set_color_scheme_for_entity(cse_msel_cols, p + 5);
+		} else {
+			fprint(2, "bad color scheme entity: %s\n", p);
+			return;
+		}
+	}
+}
+
+static char*
+set_color_scheme_for_entity(int *ecols, char *csspec)
+{
+	char *p = csspec;
+	int i = 0;
+
+	while((ecols[i] != EOCOLS) && *p && (*p != ';')) {
+		/* If a current value isn't empty, parse and save it */
+		if (*p != ':') {
+			ecols[i] = strtol(p, &p, 0);
+			if (*p && (*p != ':') && (*p != ';'))
+				goto err;
+		}
+		if (*p == ':') {
+			p++;
+			i++;
+		}
+	}
+	if ((ecols[i] == EOCOLS) || (ecols[i+1] != EOCOLS)) {
+		fprint(2, "color codes quantity is wrong: '%s'\n", csspec);
+		return nil;
+	}
+
+	return p;
+err:
+	fprint(2, "wrong color code in: '%s'\n", csspec);
+	return nil;
+}
 
 void
 killprocs(void)
@@ -1042,18 +1119,19 @@ iconinit(void)
 
 	if(tagcols[BACK] == nil) {
 		/* Blue */
-		tagcols[BACK] = allocimagemix(display, DPalebluegreen, DWhite);
-		tagcols[HIGH] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DPalegreygreen);
-		tagcols[BORD] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DPurpleblue);
-		tagcols[TEXT] = display->black;
-		tagcols[HTEXT] = display->black;
+		tagcols[BACK] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_tag_cols[0]);
+		tagcols[HIGH] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_tag_cols[1]);
+		tagcols[BORD] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_tag_cols[2]);
+		tagcols[TEXT] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_tag_cols[3]);
+		tagcols[HTEXT] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_tag_cols[4]);
 
 		/* Yellow */
-		textcols[BACK] = allocimagemix(display, DPaleyellow, DWhite);
-		textcols[HIGH] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DDarkyellow);
-		textcols[BORD] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DYellowgreen);
-		textcols[TEXT] = display->black;
-		textcols[HTEXT] = display->black;
+		textcols[BACK] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_text_cols[0]);
+
+		textcols[HIGH] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_text_cols[1]);
+		textcols[BORD] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_text_cols[2]);
+		textcols[TEXT] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_text_cols[3]);
+		textcols[HTEXT] = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_text_cols[4]);
 	}
 
 	r = Rect(0, 0, Scrollwid+ButtonBorder, font->height+1);
@@ -1077,15 +1155,17 @@ iconinit(void)
 	r.max.x -= ButtonBorder;
 	border(modbutton, r, ButtonBorder, tagcols[BORD], ZP);
 	r = insetrect(r, ButtonBorder);
-	tmp = allocimage(display, Rect(0,0,1,1), screen->chan, 1, DMedblue);
+	tmp = allocimage(display, Rect(0,0,1,1), screen->chan, 1, cse_modflag_cols[0]);
 	draw(modbutton, r, tmp, nil, ZP);
 	freeimage(tmp);
 
 	r = button->r;
-	colbutton = allocimage(display, r, screen->chan, 0, DPurpleblue);
+	colbutton = allocimage(display, r, screen->chan, 0, cse_colbut_cols[0]);
 
-	but2col = allocimage(display, r, screen->chan, 1, 0xAA0000FF);
-	but3col = allocimage(display, r, screen->chan, 1, 0x006600FF);
+	but2col[0] = allocimage(display, r, screen->chan, 1, cse_msel_cols[0]);
+	but2col[1] = allocimage(display, r, screen->chan, 1, cse_msel_cols[1]);
+	but3col[0] = allocimage(display, r, screen->chan, 1, cse_msel_cols[2]);
+	but3col[1] = allocimage(display, r, screen->chan, 1, cse_msel_cols[3]);
 }
 
 /*

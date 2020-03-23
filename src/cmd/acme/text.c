@@ -1261,7 +1261,7 @@ enum {
 };
 
 uint
-xselect(Frame *f, Mousectl *mc, Image *col, uint *p1p)	/* when called, button is down */
+xselect(Frame *f, Mousectl *mc, Image *high, Image *htext, uint *p1p)	/* when called, button is down */
 {
 	uint p0, p1, q, tmp;
 	ulong msec;
@@ -1294,12 +1294,12 @@ xselect(Frame *f, Mousectl *mc, Image *col, uint *p1p)	/* when called, button is
 				pt1 = pt0;
 				reg = region(q, p0);
 				if(reg == 0)
-					frdrawsel0(f, pt0, p0, p1, col, display->white);
+					frdrawsel0(f, pt0, p0, p1, high, htext);
 			}
 			qt = frptofchar(f, q);
 			if(reg > 0){
 				if(q > p1)
-					frdrawsel0(f, pt1, p1, q, col, display->white);
+					frdrawsel0(f, pt1, p1, q, high, htext);
 
 				else if(q < p1)
 					selrestore(f, qt, q, p1);
@@ -1307,7 +1307,7 @@ xselect(Frame *f, Mousectl *mc, Image *col, uint *p1p)	/* when called, button is
 				if(q > p1)
 					selrestore(f, pt1, p1, q);
 				else
-					frdrawsel0(f, qt, q, p1, col, display->white);
+					frdrawsel0(f, qt, q, p1, high, htext);
 			}
 			p1 = q;
 			pt1 = qt;
@@ -1344,12 +1344,12 @@ xselect(Frame *f, Mousectl *mc, Image *col, uint *p1p)	/* when called, button is
 }
 
 int
-textselect23(Text *t, uint *q0, uint *q1, Image *high, int mask)
+textselect23(Text *t, uint *q0, uint *q1, Image *high, Image *htext, int mask)
 {
 	uint p0, p1;
 	int buts;
 
-	p0 = xselect(&t->fr, mousectl, high, &p1);
+	p0 = xselect(&t->fr, mousectl, high, htext, &p1);
 	buts = mousectl->m.buttons;
 	if((buts & mask) == 0){
 		*q0 = p0+t->org;
@@ -1367,7 +1367,7 @@ textselect2(Text *t, uint *q0, uint *q1, Text **tp)
 	int buts;
 
 	*tp = nil;
-	buts = textselect23(t, q0, q1, but2col, 4);
+	buts = textselect23(t, q0, q1, but2col[0], but2col[1], 4);
 	if(buts & 4)
 		return 0;
 	if(buts & 1){	/* pick up argument */
@@ -1382,7 +1382,7 @@ textselect3(Text *t, uint *q0, uint *q1)
 {
 	int h;
 
-	h = (textselect23(t, q0, q1, but3col, 1|2) == 0);
+	h = (textselect23(t, q0, q1, but3col[0], but3col[1], 1|2) == 0);
 	return h;
 }
 
